@@ -1,10 +1,6 @@
 (function(){
     // define constants
-    var ZOMBIE_COOKIE = {
-        name: ZOMBIE_COOKIE_NAME,
-        value: "" //TODO
-    };
-    var ZOMBIE_COOKIE_NAME = "persistent-user-id";
+    var ZOMBIE_COOKIE_NAME = "persistent-user-id"; //TODO change this name. Also, we will store a lot of info, not just this one
     var INFINITY_EXPIRING_DAY = "Fri, 31 Dec 9999 23:59:59 GMT";
     var DEFAULT_MAX_USERID = 1000;
 
@@ -20,9 +16,16 @@
         // private variables
         var DEFAULT_COOKIE_EXPR_DAYS = 1000;
         var DEFAULT_SQLITE_DB_SIZE = 1 * 1024 * 1024; // 1MB of openDatabase capacity
+        var DEFAULT_SQLITE_DB_NAME = "Zombie_Cookies_DB";
+        var DEFAULT_SQLITE_DB_VERSION = "1.0";
+        var DEFAULT_SQLITE_DB_SHORTNAME = "zcdb";
+        var _indexedDB = null;
+        var DEFAULT_INDEXEDDB_NAME = "Zombie_Cookies_IndexedDB";
+        var DEFAULT_INDEXEDDB_VERSION = 1;
         var _checkedCookiesArray = [];
         var _zombieCookieValue = null;
         var _SQLiteDatabase = null;
+
 
         var _cookieGettingFunctions = [
             function getDocumentCookie(cookieName){
@@ -69,19 +72,51 @@
             function getHTML5SQLiteCookie(cookieName){
                 var cookieValue = undefined;
                 if (_isBrowserSupportSQLite()) {
-                    _SQLiteDatabase = openDatabase('zcdb', '1.0', 'Zombie_Cookies_DB', DEFAULT_SQLITE_DB_SIZE);
-                    _SQLiteDatabase.transaction(function (tx) {
-                        tx.executeSql('SELECT * FROM Zombie_Cookie', [], function (tx, results) {
-                            var len = results.rows.length;
-                            for (var i = 0; i < len; i++){
-                                if (results.rows.item(i).cookieName == cookieName) {
-                                    cookieValue = results.rows.item(i).cookieValue;
+                    try {
+                        _SQLiteDatabase = openDatabase(DEFAULT_SQLITE_DB_SHORTNAME, DEFAULT_SQLITE_DB_VERSION, DEFAULT_SQLITE_DB_NAME, DEFAULT_SQLITE_DB_SIZE);
+                        _SQLiteDatabase.transaction(function (tx) {
+                            tx.executeSql('SELECT * FROM Zombie_Cookie', [], function (tx, results) {
+                                var len = results.rows.length;
+                                for (var i = 0; i < len; i++){
+                                    if (results.rows.item(i).cookieName == cookieName) {
+                                        cookieValue = results.rows.item(i).cookieValue;
+                                    }
                                 }
-                            }
-                            if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                            return cookieValue;
+                                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                                return cookieValue;
+                            });
                         });
-                    });
+                    } catch(e){
+                        console.log("Error: " + e);
+                        return cookieValue;
+                    }
+                }
+                else {
+                    return undefined;
+                }
+            },
+            function getHTML5IndexedDBCookie(cookieName){
+                var cookieValue = undefined;
+                if (_isBrowserSupportIndexedDB()){
+                    try {
+                        _initIndexedDB(); //TODO by default, the initIndexedDB is set to the getCookie function because the getCookie function runs firts
+                        var transaction = _indexedDB.transaction(["zombieCookies"], "readonly");
+                        var objectStore = transaction.objectStore("zombieCookies",{ keyPath: "cookieName" });
+                        var cursor = objectStore.openCursor();
+                        cursor.onsuccess = function(e) {
+                            var res = e.target.result;
+                            if(res){
+                                if (res.value.cookieName == ZOMBIE_COOKIE_NAME){
+                                    cookieValue = res.value.cookieValue;
+                                }
+                                res.continue();
+                            }
+                        };
+                        if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                        return cookieValue;
+                    } catch (e){
+                        console.log("Error: " + e);
+                    }
                 }
                 else {
                     return undefined;
@@ -120,12 +155,38 @@
             },
             function setHTML5SQLiteCookie(cookieName, cookieValue){
                 if(_isBrowserSupportSQLite()){
-                    _SQLiteDatabase = openDatabase('zcdb', '1.0', 'Zombie_Cookies_DB', DEFAULT_SQLITE_DB_SIZE);
-                    _SQLiteDatabase.transaction(function (tx) {
-                        tx.executeSql('CREATE TABLE IF NOT EXISTS Zombie_Cookie (cookieName unique, cookieValue)');
-                        tx.executeSql('INSERT INTO Zombie_Cookie (cookieName, cookieValue) VALUES (?, ?)', [cookieName, cookieValue], null, null);
-                    });
-                    return true;
+                    try {
+                        _SQLiteDatabase = openDatabase(DEFAULT_SQLITE_DB_SHORTNAME, DEFAULT_SQLITE_DB_VERSION, DEFAULT_SQLITE_DB_NAME, DEFAULT_SQLITE_DB_SIZE);
+                        _SQLiteDatabase.transaction(function (tx) {
+                            tx.executeSql('CREATE TABLE IF NOT EXISTS Zombie_Cookie (cookieName unique, cookieValue)');
+                            tx.executeSql('INSERT INTO Zombie_Cookie (cookieName, cookieValue) VALUES (?, ?)', [cookieName, cookieValue], null, null);
+                        });
+                        return true;
+                    } catch(e){
+                        console.log("Error: " + e);
+                        return false;
+                    }
+                }
+                else {
+                    return false;
+                }
+            },
+            function setHTML5IndexedDBCookie(cookieName, cookieValue){
+                if(_isBrowserSupportIndexedDB()){
+                    try {
+                        var transaction = _indexedDB.transaction(["zombieCookies"], "readwrite");
+                        transaction.onerror = function(e){
+                            console.log("Transaction error: ", e.target.error.name + " " + e.target.error.message);
+                        };
+                        var store = transaction.objectStore("zombieCookies", { keyPath: "cookieName" });
+                        var cookie = {
+                            cookieName: cookieName,
+                            cookieValue: cookieValue
+                        };
+                        var request = store.put(cookie);
+                    } catch(e) {
+                        console.log("Error: " + e);
+                    }
                 }
                 else {
                     return false;
@@ -163,11 +224,34 @@
             },
             function removeHTML5SQLiteCookie(cookieName){
                 if (_isBrowserSupportSQLite()) {
-                    _SQLiteDatabase = openDatabase('zcdb', '1.0', 'Zombie_Cookies_DB', DEFAULT_SQLITE_DB_SIZE);
-                    _SQLiteDatabase.transaction(function (tx) {
-                        tx.executeSql('DELETE FROM Zombie_Cookie WHERE cookieName = ?', [cookieName], null, null);
-                    });
-                    return true;
+                    try {
+                        _SQLiteDatabase = openDatabase(DEFAULT_SQLITE_DB_SHORTNAME, DEFAULT_SQLITE_DB_VERSION, DEFAULT_SQLITE_DB_NAME, DEFAULT_SQLITE_DB_SIZE);
+                        _SQLiteDatabase.transaction(function (tx) {
+                            tx.executeSql('DELETE FROM Zombie_Cookie WHERE cookieName = ?', [cookieName], null, null);
+                        });
+                        return true;
+                    } catch(e) {
+                        console.log("Error: " + e);
+                        return false;
+                    }
+                }
+                else {
+                    return false;
+                }
+            },
+            function removeHTML5IndexedDBCookie(cookieName){
+                if(_isBrowserSupportIndexedDB()){
+                    try {
+                        var request = _indexedDB.transaction(["zombieCookies"], "readwrite")
+                            .objectStore("zombieCookies")
+                            .delete(cookieName);
+                        request.onsuccess = function(event) {
+                            return true;
+                        };
+                    } catch(e) {
+                        console.log("Error: " + e);
+                        return false;
+                    }
                 }
                 else {
                     return false;
@@ -223,11 +307,41 @@
                 return false;
             }
         }
+        function _isBrowserSupportIndexedDB(){
+            try {
+                window.indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+                window.IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction || window.msIDBTransaction;
+                window.IDBKeyRange = window.IDBKeyRange || window.webkitIDBKeyRange || window.msIDBKeyRange;
+                return !!window.indexedDB;
+            } catch(e) {
+                return false;
+            }
+        }
+        function _initIndexedDB(){
+            try {
+                var idbRequest = indexedDB.open(DEFAULT_INDEXEDDB_NAME, DEFAULT_INDEXEDDB_VERSION);
+                idbRequest.onupgradeneeded = function(event) {
+                    var thisDB = event.target.result;
+                    if(!thisDB.objectStoreNames.contains("zombieCookies")) {
+                        thisDB.createObjectStore("zombieCookies", { keyPath: "cookieName" });
+                    }
+                };
+                idbRequest.onerror = function(event) {
+                    console.log("OpenDb FAILED: " + event.target.errorCode);
+                };
+                idbRequest.onsuccess = function(event) {
+                    console.log("openDb DONE");
+                    _indexedDB = event.target.result;
+                };
+            } catch(e) {
+                console.log("Error: " + e);
+            }
+        }
 
         return {
-            getCookie: function(){
+            getCookie: function(cookieName){
                 _cookieGettingFunctions.forEach(function(callback){
-                    callback(ZOMBIE_COOKIE_NAME);
+                    callback(cookieName);
                 });
                 var res = _getModeElement(_checkedCookiesArray);
                 if (res !== null) {
@@ -251,7 +365,6 @@
         }
     };
 
-
     /*
     Utility functions
      */
@@ -272,9 +385,8 @@
         return Math.floor(Math.random()*(max - min + 1) + min);
     }
 
-
     var myZombieCookie = TsZombieCookie();
-    var zombieCookieValue = myZombieCookie.getCookie();
+    var zombieCookieValue = myZombieCookie.getCookie(ZOMBIE_COOKIE_NAME);
     myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, zombieCookieValue, 1000);
     displayCookie();
 
@@ -298,7 +410,5 @@
     };
 
     displayCookie();
-
-    console.log(myZombieCookie.getCookie());
 
 })();
