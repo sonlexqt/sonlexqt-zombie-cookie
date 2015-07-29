@@ -368,47 +368,49 @@
     /*
     Utility functions
      */
-    function getCookie(cookieName){
-        var value = "; " + document.cookie;
-        var parts = value.split("; " + cookieName + "=");
-        if (parts.length == 2) {
-            var cookieValue = parts.pop().split(";").shift();
-            return cookieValue;
+    var TsZombieCookieUtilities = function(){
+        function _getCookie(cookieName){
+            var value = "; " + document.cookie;
+            var parts = value.split("; " + cookieName + "=");
+            if (parts.length == 2) {
+                var cookieValue = parts.pop().split(";").shift();
+                return cookieValue;
+            }
         }
-    }
-    function displayCookie(){
-        var cookieVal = getCookie(ZOMBIE_COOKIE_NAME) || "hasn't been set yet";
-        document.getElementById("current-cookie-value").textContent = cookieVal;
-    }
-    function getRandomNumber(min, max)
-    {
-        return Math.floor(Math.random()*(max - min + 1) + min);
-    }
+        return {
+            displayCookie: function(){
+                var cookieVal = _getCookie(ZOMBIE_COOKIE_NAME) || "hasn't been set yet";
+                document.getElementById("current-cookie-value").textContent = cookieVal;
+            },
+            getRandomNumber: function(min, max)
+            {
+                return Math.floor(Math.random()*(max - min + 1) + min);
+            }
+        }
+    };
 
+    var myZombieCookieUtilities = TsZombieCookieUtilities();
     var myZombieCookie = TsZombieCookie();
     var zombieCookieValue = myZombieCookie.getCookie(ZOMBIE_COOKIE_NAME);
     myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, zombieCookieValue, 1000);
-    displayCookie();
+    myZombieCookieUtilities.displayCookie();
 
     /*
      Event handlers
      */
     setCookieBtn.onclick = function(){
         // set the zombie cookie to expire in 1000 days
-        myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, getRandomNumber(1, DEFAULT_MAX_USERID), 1000);
-        displayCookie();
+        myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, myZombieCookieUtilities.getRandomNumber(1, DEFAULT_MAX_USERID), 1000);
+        myZombieCookieUtilities.displayCookie();
     };
 
     deleteCookieBtn.onclick = function(){
         // delete the zombie cookie by setting it's expiring day to a day in the past
         myZombieCookie.removeCookie(ZOMBIE_COOKIE_NAME);
-        displayCookie();
+        myZombieCookieUtilities.displayCookie();
     };
 
     showCookieBtn.onclick = function(){
         console.log(document.cookie);
     };
-
-    displayCookie();
-
 })();
