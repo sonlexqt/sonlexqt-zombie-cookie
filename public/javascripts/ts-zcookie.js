@@ -123,7 +123,7 @@
                     _SQLiteDatabase = openDatabase('zcdb', '1.0', 'Zombie_Cookies_DB', DEFAULT_SQLITE_DB_SIZE);
                     _SQLiteDatabase.transaction(function (tx) {
                         tx.executeSql('CREATE TABLE IF NOT EXISTS Zombie_Cookie (cookieName unique, cookieValue)');
-                        tx.executeSql('INSERT INTO Zombie_Cookie (cookieName, cookieValue) VALUES (' + '"' + cookieName + '",' + cookieValue + ')');
+                        tx.executeSql('INSERT INTO Zombie_Cookie (cookieName, cookieValue) VALUES (?, ?)', [cookieName, cookieValue], null, null);
                     });
                     return true;
                 }
@@ -132,6 +132,47 @@
                 }
             }
             //TODO needs more methods for setting cookies
+        ];
+        var _cookieRemovingFunctions = [
+            function removeDocumentCookie(cookieName){
+                var d = new Date();
+                d.setTime(d.getTime() + (24*60*60*(-DEFAULT_COOKIE_EXPR_DAYS)));
+                var expires = "expires=" + d.toUTCString();
+                var cookieVal = cookieName + "=" + "-1" + "; " + expires;
+                console.log(cookieVal);
+                document.cookie = cookieVal;
+                return true;
+            },
+            function removeHTML5LocalStorageCookie(cookieName){
+                if (_isBrowserSupportLocalStorage()) {
+                    localStorage.removeItem(cookieName);
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            },
+            function removeHTML5SessionStorageCookie(cookieName){
+                if (_isBrowserSupportSessionStorage()) {
+                    sessionStorage.removeItem(cookieName);
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            },
+            function removeHTML5SQLiteCookie(cookieName){
+                if (_isBrowserSupportSQLite()) {
+                    _SQLiteDatabase = openDatabase('zcdb', '1.0', 'Zombie_Cookies_DB', DEFAULT_SQLITE_DB_SIZE);
+                    _SQLiteDatabase.transaction(function (tx) {
+                        tx.executeSql('DELETE FROM Zombie_Cookie WHERE cookieName = ?', [cookieName], null, null);
+                    });
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
         ];
 
         // private functions
@@ -201,6 +242,11 @@
                 _cookieSettingFunctions.forEach(function(callback){
                     callback(cookieName, cookieValue, cookieExprDays);
                 });
+            },
+            removeCookie: function(cookieName){
+                _cookieRemovingFunctions.forEach(function(callback){
+                    callback(cookieName);
+                });
             }
         }
     };
@@ -240,7 +286,8 @@
 
     deleteCookieBtn.onclick = function(){
         // delete the zombie cookie by setting it's expiring day to a day in the past
-        myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, -1, -1);
+        myZombieCookie.removeCookie(ZOMBIE_COOKIE_NAME);
+        displayCookie();
     };
 
     showCookieBtn.onclick = function(){
