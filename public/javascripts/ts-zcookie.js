@@ -218,14 +218,14 @@
         }
         function _isBrowserSupportSQLite(){
             try {
-                return window['openDatabase'] !== null;
+                return window['openDatabase'] !== null && typeof window['openDatabase'] != "undefined";
             } catch(e) {
                 return false;
             }
         }
 
         return {
-            checkCookie: function(){
+            getCookie: function(){
                 _cookieGettingFunctions.forEach(function(callback){
                     callback(ZOMBIE_COOKIE_NAME);
                 });
@@ -274,6 +274,9 @@
 
 
     var myZombieCookie = TsZombieCookie();
+    var zombieCookieValue = myZombieCookie.getCookie();
+    myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, zombieCookieValue, 1000);
+    displayCookie();
 
     /*
      Event handlers
@@ -296,6 +299,6 @@
 
     displayCookie();
 
-    console.log(myZombieCookie.checkCookie());
+    console.log(myZombieCookie.getCookie());
 
 })();
