@@ -26,6 +26,8 @@
         var _zombieCookieValue = null;
         var _SQLiteDatabase = null;
 
+        var _isSQLiteCookieReady = false;
+
 
         var _cookieGettingFunctions = [
             function getDocumentCookie(cookieName){
@@ -34,17 +36,20 @@
                 if (parts.length == 2) {
                     var cookieValue = parts.pop().split(";").shift();
                     if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                    console.log("document.cookie: " + cookieValue);
                     return cookieValue;
                 }
             },
             function getLocalSharedObjectsCookie(cookieName){ //TODO need implementation
                 var cookieValue = undefined;
                 if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                console.log("lso: " + cookieValue);
                 return undefined;
             },
             function getSilverlightCookie(cookieName){ //TODO need implementation
                 var cookieValue = undefined;
                 if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                console.log("sl: " + cookieValue);
                 return undefined;
             },
             function getHTML5LocalStorageCookie(cookieName){
@@ -52,6 +57,7 @@
                 if (_isBrowserSupportLocalStorage()) {
                     cookieValue = localStorage.getItem(cookieName);
                     if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                    console.log("localStorage cookie: " + cookieValue);
                     return cookieValue;
                 }
                 else {
@@ -63,6 +69,7 @@
                 if (_isBrowserSupportSessionStorage()) {
                     cookieValue = sessionStorage.getItem(cookieName);
                     if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                    console.log("sessionStorage cookie: " + cookieValue);
                     return cookieValue;
                 }
                 else {
@@ -83,8 +90,10 @@
                                     }
                                 }
                                 if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                                console.log("sqLite cookie: " + cookieValue);
+                                _isSQLiteCookieReady = true; //TODO
                                 return cookieValue;
-                            });
+                            }, function (tx, error){});
                         });
                     } catch(e){
                         console.log("Error: " + e);
@@ -113,6 +122,7 @@
                             }
                         };
                         if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                        console.log("indexedDB cookie: " + cookieValue);
                         return cookieValue;
                     } catch (e){
                         console.log("Error: " + e);
@@ -131,7 +141,6 @@
                 d.setTime(d.getTime() + (24*60*60*exprDays));
                 var expires = "expires=" + d.toUTCString();
                 var cookieVal = cookieName + "=" + cookieValue + "; " + expires;
-                console.log(cookieVal);
                 document.cookie = cookieVal;
                 return true;
             },
@@ -158,8 +167,23 @@
                     try {
                         _SQLiteDatabase = openDatabase(DEFAULT_SQLITE_DB_SHORTNAME, DEFAULT_SQLITE_DB_VERSION, DEFAULT_SQLITE_DB_NAME, DEFAULT_SQLITE_DB_SIZE);
                         _SQLiteDatabase.transaction(function (tx) {
-                            tx.executeSql('CREATE TABLE IF NOT EXISTS Zombie_Cookie (cookieName unique, cookieValue)');
-                            tx.executeSql('INSERT INTO Zombie_Cookie (cookieName, cookieValue) VALUES (?, ?)', [cookieName, cookieValue], null, null);
+                            tx.executeSql('CREATE TABLE IF NOT EXISTS Zombie_Cookie (' +
+                                'id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, ' +
+                                'cookieName TEXT UNIQUE NOT NULL, ' +
+                                'cookieValue TEXT NOT NULL)',
+                                [],
+                                function(tx, result){
+                                    console.log("create table done !");
+                                },
+                                function(tx, err){
+                                    console.log("error when creating table");
+                                }
+                            );
+                            tx.executeSql('INSERT OR REPLACE INTO Zombie_Cookie(cookieName, cookieValue) VALUES (?, ?)',
+                                [cookieName, cookieValue],
+                                function (tx, rs) {console.log("insert or replace done");},
+                                function (tx, err) {console.log("error when inserting or replacing");}
+                            );
                         });
                         return true;
                     } catch(e){
@@ -340,6 +364,23 @@
 
         return {
             getCookie: function(cookieName){
+                // wait for cookies from all the sources returned
+                //var getCookieInterval = setInterval(function(){
+                //    if (_isSQLiteCookieReady){ //TODO && more sources ?
+                //        clearInterval(getCookieInterval);
+                //        _cookieGettingFunctions.forEach(function(callback){
+                //            callback(cookieName);
+                //        });
+                //        var res = _getModeElement(_checkedCookiesArray);
+                //        if (res !== null) {
+                //            _zombieCookieValue = res;
+                //            return res;
+                //        }
+                //        else {
+                //            return null;
+                //        }
+                //    }
+                //}, 100);
                 _cookieGettingFunctions.forEach(function(callback){
                     callback(cookieName);
                 });
@@ -392,7 +433,7 @@
     var myZombieCookieUtilities = TsZombieCookieUtilities();
     var myZombieCookie = TsZombieCookie();
     var zombieCookieValue = myZombieCookie.getCookie(ZOMBIE_COOKIE_NAME);
-    myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, zombieCookieValue, 1000);
+    if(zombieCookieValue !== null) myZombieCookie.setCookie(ZOMBIE_COOKIE_NAME, zombieCookieValue, 1000);
     myZombieCookieUtilities.displayCookie();
 
     /*
