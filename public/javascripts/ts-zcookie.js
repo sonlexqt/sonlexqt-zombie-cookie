@@ -9,12 +9,34 @@
     var deleteCookieBtn = document.getElementById("btn-delete-cookie");
     var showCookieBtn = document.getElementById("btn-show-cookie");
 
+    var LogService = function(){
+        var _isDebug = true; // DEFAULT TO TRUE
+        return {
+            setDebug: function(booleanValue){
+                _isDebug = booleanValue;
+            },
+            log: function(msg){
+                if (_isDebug) console.log("> DEBUG: " + msg);
+            },
+            info: function(msg){
+                if (!_isDebug) console.info("(i) INFO: " + msg);
+            },
+            warning: function(msg){
+                if (!_isDebug) console.warn("/!\\ WARNING: " + msg);
+            },
+            error: function(msg){
+                if (!_isDebug) console.error("!!! ERROR: " + msg);
+            }
+        }
+    };
+
     /*
     TsZombieCookie singleton class
      */
     var TsZombieCookie = function(){
         // private variables
         var DEFAULT_COOKIE_EXPR_DAYS = 1000;
+        var _SQLiteDatabase = null;
         var DEFAULT_SQLITE_DB_SIZE = 1 * 1024 * 1024; // 1MB of openDatabase capacity
         var DEFAULT_SQLITE_DB_NAME = "Zombie_Cookies_DB";
         var DEFAULT_SQLITE_DB_VERSION = "1.0";
@@ -24,10 +46,9 @@
         var DEFAULT_INDEXEDDB_VERSION = 1;
         var _checkedCookiesArray = [];
         var _zombieCookieValue = null;
-        var _SQLiteDatabase = null;
 
-        var _isSQLiteCookieReady = false;
-
+        var _isSQLiteCookieReady = false; //TODO is this neccessary ?
+        var _logService = LogService(); //TODO when use in production, setDebug to false
 
         var _cookieGettingFunctions = [
             function getDocumentCookie(cookieName){
@@ -35,46 +56,34 @@
                 var parts = value.split("; " + cookieName + "=");
                 if (parts.length == 2) {
                     var cookieValue = parts.pop().split(";").shift();
-                    if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                    console.log("document.cookie: " + cookieValue);
-                    return cookieValue;
                 }
-            },
-            function getLocalSharedObjectsCookie(cookieName){ //TODO need implementation
-                var cookieValue = undefined;
                 if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                console.log("lso: " + cookieValue);
-                return undefined;
-            },
-            function getSilverlightCookie(cookieName){ //TODO need implementation
-                var cookieValue = undefined;
-                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                console.log("sl: " + cookieValue);
-                return undefined;
+                _logService.log("document.cookie: " + cookieValue);
+                return cookieValue;
             },
             function getHTML5LocalStorageCookie(cookieName){
                 var cookieValue = undefined;
                 if (_isBrowserSupportLocalStorage()) {
                     cookieValue = localStorage.getItem(cookieName);
-                    if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                    console.log("localStorage cookie: " + cookieValue);
-                    return cookieValue;
                 }
                 else {
-                    return undefined;
+                    // do nothing
                 }
+                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                _logService.log("localStorage cookie: " + cookieValue);
+                return cookieValue;
             },
             function getHTML5SessionStorageCookie(cookieName){
                 var cookieValue = undefined;
                 if (_isBrowserSupportSessionStorage()) {
                     cookieValue = sessionStorage.getItem(cookieName);
-                    if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                    console.log("sessionStorage cookie: " + cookieValue);
-                    return cookieValue;
                 }
                 else {
-                    return undefined;
+                    // do nothing
                 }
+                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                _logService.log("sessionStorage cookie: " + cookieValue);
+                return cookieValue;
             },
             function getHTML5SQLiteCookie(cookieName){
                 var cookieValue = undefined;
@@ -89,20 +98,20 @@
                                         cookieValue = results.rows.item(i).cookieValue;
                                     }
                                 }
-                                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                                console.log("sqLite cookie: " + cookieValue);
-                                _isSQLiteCookieReady = true; //TODO
-                                return cookieValue;
                             }, function (tx, error){});
                         });
                     } catch(e){
-                        console.log("Error: " + e);
+                        _logService.error("Error: " + e);
                         return cookieValue;
                     }
                 }
                 else {
-                    return undefined;
+                    // do nothing
                 }
+                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                _logService.log("HTML5 SQLite cookie: " + cookieValue);
+                _isSQLiteCookieReady = true; //TODO
+                return cookieValue;
             },
             function getHTML5IndexedDBCookie(cookieName){
                 var cookieValue = undefined;
@@ -121,16 +130,16 @@
                                 res.continue();
                             }
                         };
-                        if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
-                        console.log("indexedDB cookie: " + cookieValue);
-                        return cookieValue;
                     } catch (e){
-                        console.log("Error: " + e);
+                        _logService.error("Error: " + e);
                     }
                 }
                 else {
-                    return undefined;
+                    // do nothing
                 }
+                if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                _logService.log("indexedDB cookie: " + cookieValue);
+                return cookieValue;
             }
             //TODO needs more methods for getting cookies
         ];
@@ -173,21 +182,21 @@
                                 'cookieValue TEXT NOT NULL)',
                                 [],
                                 function(tx, result){
-                                    console.log("create table done !");
+                                    _logService.log("Create table done.");
                                 },
                                 function(tx, err){
-                                    console.log("error when creating table");
+                                    _logService.error("Error when creating table.");
                                 }
                             );
                             tx.executeSql('INSERT OR REPLACE INTO Zombie_Cookie(cookieName, cookieValue) VALUES (?, ?)',
                                 [cookieName, cookieValue],
-                                function (tx, rs) {console.log("insert or replace done");},
-                                function (tx, err) {console.log("error when inserting or replacing");}
+                                function (tx, rs) {_logService.log("Insert or replace cookie done.");},
+                                function (tx, err) {_logService.error("Error when inserting or replacing cookie.");}
                             );
                         });
                         return true;
                     } catch(e){
-                        console.log("Error: " + e);
+                        _logService.error("Error: " + e);
                         return false;
                     }
                 }
@@ -200,7 +209,7 @@
                     try {
                         var transaction = _indexedDB.transaction(["zombieCookies"], "readwrite");
                         transaction.onerror = function(e){
-                            console.log("Transaction error: ", e.target.error.name + " " + e.target.error.message);
+                            _logService.error("Transaction error: ", e.target.error.name + " " + e.target.error.message);
                         };
                         var store = transaction.objectStore("zombieCookies", { keyPath: "cookieName" });
                         var cookie = {
@@ -209,7 +218,7 @@
                         };
                         var request = store.put(cookie);
                     } catch(e) {
-                        console.log("Error: " + e);
+                        _logService.error("Error: " + e);
                     }
                 }
                 else {
@@ -224,7 +233,6 @@
                 d.setTime(d.getTime() + (24*60*60*(-DEFAULT_COOKIE_EXPR_DAYS)));
                 var expires = "expires=" + d.toUTCString();
                 var cookieVal = cookieName + "=" + "-1" + "; " + expires;
-                console.log(cookieVal);
                 document.cookie = cookieVal;
                 return true;
             },
@@ -255,7 +263,7 @@
                         });
                         return true;
                     } catch(e) {
-                        console.log("Error: " + e);
+                        _logService.error("Error: " + e);
                         return false;
                     }
                 }
@@ -273,7 +281,7 @@
                             return true;
                         };
                     } catch(e) {
-                        console.log("Error: " + e);
+                        _logService.error("Error: " + e);
                         return false;
                     }
                 }
@@ -351,14 +359,14 @@
                     }
                 };
                 idbRequest.onerror = function(event) {
-                    console.log("OpenDb FAILED: " + event.target.errorCode);
+                    _logService.error("OpenDb FAILED: " + event.target.errorCode);
                 };
                 idbRequest.onsuccess = function(event) {
-                    console.log("openDb DONE");
+                    _logService.log("openDb DONE.");
                     _indexedDB = event.target.result;
                 };
             } catch(e) {
-                console.log("Error: " + e);
+                _logService.error("Error: " + e);
             }
         }
 
