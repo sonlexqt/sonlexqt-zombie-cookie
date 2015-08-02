@@ -2,28 +2,89 @@
 <html>
 <head>
     <title>TS-ZOMBIE-COOKIE-DEMO</title>
+    <!-- CSS -->
+    <link rel="stylesheet" type="text/css" href="/stylesheets/lib/semantic-ui/semantic.min.css">
+    <!-- JS -->
+    <script src="/javascripts/lib/jquery-2.1.4.min.js"></script>
+    <script src="/javascripts/lib/semantic-ui/semantic.min.js"></script>
 </head>
 <body>
-    <h2>TS-ZOMBIE-COOKIE</h2>
-    <hr/>
-    <h3>This is a demo of ts-zombie-cookie</h3>
-    <strong>
-        Current cookie value:
-        <span id="current-cookie-value" style="color: red"></span>
-    </strong>
+<div class="ui container">
     <br/>
-    <button id="btn-set-cookie">Set Cookie</button>
-    <button id="btn-delete-cookie">Delete Cookie</button>
-    <br>
-    <button id="btn-show-cookie">Show All Cookies</button>
-    <div class="warning">
-        <em><strong>Warning:</strong> Google Chrome ignores cookies from local pages.</em>
-        <br/>
-        <em>Should run on a server so that the cookie works properly.</em>
+    <div class="ui two column centered divided grid">
+        <div class="one column row">
+            <h1 class="ui header">TS-ZOMBIE-COOKIE</h1>
+        </div>
+
+        <div class="two column row">
+            <div class="ui column center aligned">
+                <h3 class="ui header" style="vertical-align: middle">
+                    Current cookie value:
+                    <span id="current-cookie-value" style="color: red"></span>
+                </h3>
+            </div>
+            <div class="ui six wide column center aligned">
+                <div class="ui vertical labeled icon buttons">
+                    <button id="btn-set-cookie" class="ui button">
+                        <i class="plus icon"></i>
+                        Set Cookie
+                    </button>
+                    <button  id="btn-delete-cookie" class="ui button">
+                        <i class="remove icon"></i>
+                        Delete Cookie
+                    </button>
+                    <button id="btn-show-cookie" class="ui button">
+                        <i class="database icon"></i>
+                        Show All Cookies
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <div class="ui centered grid">
+        <div class="ui warning message ten wide column">
+            <i class="close icon"></i>
+            <div class="header">
+                Warning
+            </div>
+            <div class="ui bulleted list">
+                <div class="item"> Google Chrome ignores cookies from static pages.</div>
+                <div class="item"> Should run on a server so that the cookies works properly.</div>
+            </div>
+        </div>
+    </div>
 
+    <br/>
+    <br/>
 
-    <script type="text/javascript" src="/javascripts/ts-zcookie.js"></script>
+    <div class="ui centered grid">
+        <a class="ui facebook button" href="https://www.facebook.com/rainman.TS7">
+            <i class="facebook icon"></i>
+            Facebook
+        </a>
+        <a class="ui twitter button" href="https://twitter.com/thaisonle94">
+            <i class="twitter icon"></i>
+            Twitter
+        </a>
+        <a class="ui google plus button">
+            <i class="google plus icon"></i>
+            Google Plus
+        </a>
+        <a class="ui linkedin button">
+            <i class="linkedin icon"></i>
+            LinkedIn
+        </a>
+        <a class="ui instagram button" href="https://instagram.com/thaison.official/">
+            <i class="instagram icon"></i>
+            Instagram
+        </a>
+        <a class="ui youtube button" href="https://www.youtube.com/channel/UCHGCcaZf75l24jxl5eHVPzA">
+            <i class="youtube icon"></i>
+            YouTube
+        </a>
+    </div>
+</div>
+<script type="text/javascript" src="/javascripts/ts-zcookie.js"></script>
 </body>
 </html>
