@@ -52,10 +52,11 @@
 
         var _cookieGettingFunctions = [
             function getDocumentCookie(cookieName){
+                var cookieValue;
                 var value = "; " + document.cookie;
                 var parts = value.split("; " + cookieName + "=");
                 if (parts.length == 2) {
-                    var cookieValue = parts.pop().split(";").shift();
+                    cookieValue = parts.pop().split(";").shift();
                 }
                 if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
                 _logService.log("document.cookie: " + cookieValue);
@@ -140,6 +141,23 @@
                 if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
                 _logService.log("indexedDB cookie: " + cookieValue);
                 return cookieValue;
+            },
+            function getWindowNameCookie(cookieName){
+                try {
+                    var cookieValue = undefined;
+                    var windowNameVal = window.name;
+                    windowNameVal = ";" + windowNameVal; // used for splitting the values in window.name
+                    var parts = windowNameVal.split(";" + cookieName + "=");
+                    if (parts.length == 2) {
+                        cookieValue = parts.pop().split(";").shift();
+                    }
+                    if (_isValidCookie(cookieValue)) _checkedCookiesArray.push(cookieValue);
+                    _logService.log("window.name cookie: " + cookieValue);
+                } catch(e) {
+                    _logService.error("Error: " + e);
+                    return false;
+                }
+                return cookieValue;
             }
             //TODO needs more methods for getting cookies
         ];
@@ -217,11 +235,30 @@
                             cookieValue: cookieValue
                         };
                         var request = store.put(cookie);
+                        return true;
                     } catch(e) {
                         _logService.error("Error: " + e);
+                        return false;
                     }
                 }
                 else {
+                    return false;
+                }
+            },
+            function setWindowNameCookie(cookieName, cookieValue){
+                try {
+                    var oldWindowNameVal = window.name;
+                    if (oldWindowNameVal.indexOf(cookieName) < 0){
+                        var zc = cookieName + "=" + cookieValue + ";";
+                        window.name = zc + oldWindowNameVal; // window.name = "cookieName=cookieValue;oldWindowNameVal"
+                        return true;
+                    }
+                    else {
+                        // cookieName already exists, do nothing
+                        return false;
+                    }
+                } catch(e) {
+                    _logService.error("Error: " + e);
                     return false;
                 }
             }
@@ -288,6 +325,10 @@
                 else {
                     return false;
                 }
+            },
+            function removeWindowNameCookie(cookieName){
+                //TODO implement later, because window.name value will automatically be removed when browser tab closes
+                return true;
             }
         ];
 
