@@ -11,6 +11,7 @@ Some methods used for storing cookies in the client browser includes:
   - HTML5 local storage
   - HTML5 Web SQL
   - HTML5 IndexedDB
+  - window.name storage
   - // more are coming
 
 ## Installation
