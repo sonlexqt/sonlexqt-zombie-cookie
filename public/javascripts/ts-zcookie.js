@@ -9,27 +9,6 @@
     var deleteCookieBtn = document.getElementById("btn-delete-cookie");
     var showCookieBtn = document.getElementById("btn-show-cookie");
 
-    var LogService = function(){
-        var _isDebug = true; // DEFAULT TO TRUE
-        return {
-            setDebug: function(booleanValue){
-                _isDebug = booleanValue;
-            },
-            log: function(msg){
-                if (_isDebug) console.log("> DEBUG: " + msg);
-            },
-            info: function(msg){
-                if (!_isDebug) console.info("(i) INFO: " + msg);
-            },
-            warning: function(msg){
-                if (!_isDebug) console.warn("/!\\ WARNING: " + msg);
-            },
-            error: function(msg){
-                if (!_isDebug) console.error("!!! ERROR: " + msg);
-            }
-        }
-    };
-
     /*
     TsZombieCookie singleton class
      */
@@ -54,6 +33,26 @@
         var _checkedCookiesArray = [];
         var _zombieCookieValue = null;
 
+        var LogService = function(){
+            var _isDebug = true; // DEFAULT TO TRUE
+            return {
+                setDebug: function(booleanValue){
+                    _isDebug = booleanValue;
+                },
+                log: function(msg){
+                    if (_isDebug) console.log("> DEBUG: " + msg);
+                },
+                info: function(msg){
+                    if (!_isDebug) console.info("(i) INFO: " + msg);
+                },
+                warning: function(msg){
+                    if (!_isDebug) console.warn("/!\\ WARNING: " + msg);
+                },
+                error: function(msg){
+                    if (!_isDebug) console.error("!!! ERROR: " + msg);
+                }
+            }
+        };
         var _logService = LogService(); //TODO when use in production, setDebug to false
 
         var _cookieGettingFunctions = [
